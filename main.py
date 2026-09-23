@@ -1,29 +1,16 @@
 """
 API de eliminación de fondo para fotos de producto.
-Pensada para desplegar GRATIS en Render.com (Web Service, plan Free).
+Ajustada para caber en el plan FREE de Render (512 MB de RAM).
+
+Cambios respecto a la versión anterior:
+- Modelo cambiado a "u2netp" (mucho más ligero en RAM que isnet-general-use).
+- alpha_matting desactivado por defecto (consume RAM extra); puedes activarlo
+  si luego subes a un plan con más memoria.
 
 Endpoint:
     POST /quitar-fondo
     Body: form-data con un campo "archivo" = tu imagen (jpg, png, webp...)
-    Respuesta: el PNG sin fondo, con Content-Disposition indicando
-               "<nombre-original>-no-bg.png"
-
-Cómo desplegar en Render:
-1. Sube estos archivos (main.py, requirements.txt) a un repo de GitHub.
-2. Ve a https://dashboard.render.com -> New -> Web Service.
-3. Conecta ese repo de GitHub.
-4. Configura:
-     Runtime: Python 3
-     Build Command:  pip install -r requirements.txt
-     Start Command:  uvicorn main:app --host 0.0.0.0 --port $PORT
-     Plan: Free
-5. Deploy. En unos minutos te da una URL pública tipo:
-     https://tu-servicio.onrender.com
-
-Cómo probarlo desde tu terminal (una vez desplegado):
-    curl -X POST https://tu-servicio.onrender.com/quitar-fondo \
-         -F "archivo=@taza-cafe.jpg" \
-         -o taza-cafe-no-bg.png
+    Respuesta: el PNG sin fondo, nombrado "<nombre-original>-no-bg.png"
 """
 
 import io
@@ -35,13 +22,13 @@ from rembg import remove, new_session
 
 app = FastAPI(title="Quitar fondo de producto")
 
-MODELO = "isnet-general-use"
+MODELO = "u2netp"
 _session = new_session(MODELO)
 
 
 @app.get("/")
 def salud():
-    return {"estado": "ok", "mensaje": "API de eliminación de fondo activa"}
+    return {"estado": "ok", "mensaje": "API de eliminación de fondo activa", "modelo": MODELO}
 
 
 @app.post("/quitar-fondo")
@@ -51,10 +38,7 @@ async def quitar_fondo(archivo: UploadFile = File(...)):
     datos_salida = remove(
         datos_entrada,
         session=_session,
-        alpha_matting=True,
-        alpha_matting_foreground_threshold=240,
-        alpha_matting_background_threshold=10,
-        alpha_matting_erode_size=10,
+        alpha_matting=False,
     )
 
     nombre_original = Path(archivo.filename or "imagen").stem
